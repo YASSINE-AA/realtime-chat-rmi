@@ -1,28 +1,41 @@
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.List;
 
 public class ChatServerImpl extends UnicastRemoteObject implements ChatServer {
 
-    ArrayList<ChatClientImpl> clients = new ArrayList<ChatClientImpl>();
+    private final List<ChatClient> clients;
 
-    ChatServerImpl() throws RemoteException {}
+    public ChatServerImpl() throws RemoteException {
+        super();
+        clients = new ArrayList<>();
+    }
 
+    @Override
     public void sendMessage(Message message, String clientID)
         throws RemoteException {
-        for (ChatClientImpl client : clients) {
-            if (client.getID() == clientID) {
+        for (ChatClient client : clients) {
+            if (client.getID().equals(clientID)) {
                 client.receiveMessage(message);
+                return;
             }
         }
+        System.out.println("Client with ID " + clientID + " not found.");
     }
 
-    public void registerClient(ChatClientImpl client) throws RemoteException {
+    @Override
+    public void registerClient(ChatClient client) throws RemoteException {
         clients.add(client);
+        System.out.println("Client<" + client.getID() + "> registered.");
     }
 
-    public void deregisterClient(ChatClientImpl client) throws RemoteException {
-        if (clients.remove(client)) System.out.println("Client Unregistered.");
-        else System.out.println("Failed unregisterning (404).");
+    @Override
+    public void deregisterClient(ChatClient client) throws RemoteException {
+        if (clients.remove(client)) {
+            System.out.println("Client<" + client.getID() + "> unregistered.");
+        } else {
+            System.out.println("Failed unregistering client (not found).");
+        }
     }
 }

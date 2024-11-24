@@ -6,19 +6,24 @@ public class ChatClientImpl extends UnicastRemoteObject implements ChatClient {
 
     private String clientID;
 
-    ChatClientImpl() throws RemoteException {
-        // Generate random ID
+    public ChatClientImpl() throws RemoteException {
+        super();
         setID(UUID.randomUUID().toString());
     }
 
+    @Override
     public void receiveMessage(Message message) throws RemoteException {
-        System.out.println(message);
+        System.out.println(
+            "Message from " + message.source + ": " + message.content
+        );
     }
 
+    @Override
     public void setID(String clientID) throws RemoteException {
         this.clientID = clientID;
     }
 
+    @Override
     public String getID() throws RemoteException {
         return clientID;
     }
