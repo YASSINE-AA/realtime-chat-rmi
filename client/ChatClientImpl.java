@@ -1,6 +1,9 @@
+package client;
+
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.UUID;
+import models.Message;
 
 public class ChatClientImpl extends UnicastRemoteObject implements ChatClient {
 

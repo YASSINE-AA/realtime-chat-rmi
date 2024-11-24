@@ -1,5 +1,9 @@
+package client;
+
 import java.rmi.Naming;
 import java.util.Scanner;
+import models.Message;
+import server.ChatServer;
 
 public class ChatClientMain {
 
