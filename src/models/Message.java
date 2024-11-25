@@ -14,4 +14,16 @@ public class Message implements Serializable {
         this.destination = destination;
         this.content = content;
     }
+
+    public String getSource() {
+        return  source;
+    }
+
+    public String getDestination() {
+        return destination;
+    }
+
+    public String getContent() {
+        return content;
+    }
 }
