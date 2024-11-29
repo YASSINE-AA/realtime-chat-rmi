@@ -3,24 +3,22 @@ package models;
 import java.io.Serializable;
 
 public class Message implements Serializable {
+    private final String senderID;
+    private final String roomID;
+    private final String content;
 
-    private static final long serialVersionUID = 1L;
-    public final String source;
-    public final String destination;
-    public final String content;
-
-    public Message(String source, String destination, String content) {
-        this.source = source;
-        this.destination = destination;
+    public Message(String senderID, String roomID, String content) {
+        this.senderID = senderID;
+        this.roomID = roomID;
         this.content = content;
     }
 
-    public String getSource() {
-        return  source;
+    public String getSenderID() {
+        return senderID;
     }
 
-    public String getDestination() {
-        return destination;
+    public String getRoomID() {
+        return roomID;
     }
 
     public String getContent() {

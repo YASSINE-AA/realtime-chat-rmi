@@ -4,7 +4,9 @@ BUILD_DIR="bin"
 SERVER_CLASS="server.ChatServerMain"
 CLIENT_CLASS="client.ChatClientMain"
 JAR_DIR="lib"
-JAR_FILE="$JAR_DIR/lanterna.jar"
+JAR_LANTERNA="$JAR_DIR/lanterna.jar"
+JAR_SQLITE="$JAR_DIR/sqlite.jar"
+
 OUTPUT_JAR="Client.jar"
 
 usage() {
@@ -20,7 +22,7 @@ fi
 case $1 in
     clean)
         echo "Cleaning up build directory..."
-        rm -rf "$BUILD_DIR"
+        rm -rf "$BUILD_DIR" "$OUTPUT_JAR"
         echo "Build directory cleaned."
         ;;
     build)
@@ -28,7 +30,7 @@ case $1 in
 
         mkdir -p "$BUILD_DIR"
 
-        javac -cp "$JAR_FILE" -d "$BUILD_DIR" src/*/*.java
+        javac -cp "$JAR_LANTERNA:$JAR_SQLITE" -d "$BUILD_DIR" src/*/*.java
         if [[ $? -ne 0 ]]; then
             echo "Build failed. Please check the source files for errors."
             exit 2
@@ -39,7 +41,7 @@ case $1 in
         cat > "$BUILD_DIR/META-INF/MANIFEST.MF" <<EOL
 Manifest-Version: 1.0
 Main-Class: $CLIENT_CLASS
-Class-Path: $JAR_FILE
+Class-Path: $JAR_LANTERNA $JAR_SQLITE
 EOL
         echo "MANIFEST.MF created."
 
@@ -54,21 +56,19 @@ EOL
         ;;
     server)
         echo "Starting server..."
-        if [[ -d "$BUILD_DIR" ]]; then
-            cd "$BUILD_DIR" || exit
-            java -cp ".:$JAR_FILE" "$SERVER_CLASS"
+        if [[ -f "$BUILD_DIR/${SERVER_CLASS//.//}.class" ]]; then
+            java -cp "$BUILD_DIR:$JAR_LANTERNA:$JAR_SQLITE" "$SERVER_CLASS"
         else
-            echo "Error: Build directory not found. Run '$0 build' first."
+            echo "Error: Server class not found. Run '$0 build' first."
             exit 3
         fi
         ;;
     client)
         echo "Starting client..."
-        if [[ -d "$BUILD_DIR" ]]; then
-            cd "$BUILD_DIR" || exit
-            java -cp ".:$JAR_FILE" "$CLIENT_CLASS"
+        if [[ -f "$BUILD_DIR/${CLIENT_CLASS//.//}.class" ]]; then
+            java -cp "$BUILD_DIR:$JAR_LANTERNA:$JAR_SQLITE" "$CLIENT_CLASS"
         else
-            echo "Error: Build directory not found. Run '$0 build' first."
+            echo "Error: Client class not found. Run '$0 build' first."
             exit 3
         fi
         ;;

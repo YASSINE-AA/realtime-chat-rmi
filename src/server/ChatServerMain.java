@@ -9,7 +9,7 @@ public class ChatServerMain {
         try {
             ChatServerImpl server = new ChatServerImpl();
             LocateRegistry.createRegistry(1900);
-            Naming.rebind("rmi://localhost:1900/chatroom", server);
+            Naming.rebind("rmi://localhost:1900/chat", server);
             System.out.println("Chat server is ready.");
         } catch (Exception e) {
             System.err.println("Server exception: " + e.getMessage());

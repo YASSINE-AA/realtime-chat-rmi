@@ -9,15 +9,17 @@ import models.Message;
 
 public class ChatClientImpl extends UnicastRemoteObject implements ChatClient {
 
-    private String clientID;
+    private String username;
     private String joinedRoom;
     private final List<Message> messageQueue;
+    private List<String> onlineClients;
     private Consumer<Message> messageListener; 
+    private Consumer<String> clientsListener; 
 
     public ChatClientImpl() throws RemoteException {
         super();
         messageQueue = new ArrayList<>();
-        setID("Client-" + System.currentTimeMillis());
+        onlineClients = new ArrayList<>();
     }
 
     @Override
@@ -31,6 +33,7 @@ public class ChatClientImpl extends UnicastRemoteObject implements ChatClient {
         return joinedRoom;
     }
 
+
     @Override
     public void receiveMessage(Message message) throws RemoteException {
         synchronized (messageQueue) {
@@ -41,15 +44,7 @@ public class ChatClientImpl extends UnicastRemoteObject implements ChatClient {
         }
     }
 
-    @Override
-    public void setID(String clientID) throws RemoteException {
-        this.clientID = clientID;
-    }
-
-    @Override
-    public String getID() throws RemoteException {
-        return clientID;
-    }
+ 
 
     @Override
     public void resetRoom() throws RemoteException {
@@ -59,4 +54,25 @@ public class ChatClientImpl extends UnicastRemoteObject implements ChatClient {
     public void setOnMessageReceivedListener(Consumer<Message> listener) {
         this.messageListener = listener;
     }
+
+
+    public void setClientsListener(Consumer<String> listener) {
+        this.clientsListener = listener;
+    }
+    
+    @Override
+    public void addOnlineClient(String username) throws RemoteException {
+        onlineClients.add(username);
+        if (clientsListener != null) {
+            clientsListener.accept(username);
+        }
+    }
+
+    @Override
+    public String getUsername() throws RemoteException
+     {return username;}
+
+    @Override
+    public void setUsername(String username)  throws RemoteException
+    {this.username = username;}
 }

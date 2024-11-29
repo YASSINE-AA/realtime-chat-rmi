@@ -1,226 +1,335 @@
 package client;
 
-
-
-import com.googlecode.lanterna.SGR;
-import com.googlecode.lanterna.TerminalSize;
-import com.googlecode.lanterna.TextColor;
-import com.googlecode.lanterna.gui2.*;
-import com.googlecode.lanterna.screen.Screen;
-import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
-import com.googlecode.lanterna.terminal.Terminal;
-import models.Message;
-import server.ChatServer;
-
+import java.awt.*;
 import java.rmi.Naming;
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.*;
+import models.Message;
 import models.Room;
+import server.ChatServer;
 
 public class ChatClientMain {
 
     private ChatServer server;
     private ChatClientImpl client;
     private boolean isInRoom = false;
-    private List<String> onlineClients;
+    private final List<String> onlineClients = new ArrayList<>();
     private final List<String> joinedRooms = new ArrayList<>();
     private String currentRoom = null;
-    private MultiWindowTextGUI gui;
+    private String privateRecipient = null;
+    private JTextArea messagesArea;
+    private DefaultListModel<String> onlineClientsModel;
+    private DefaultListModel<String> joinedRoomsModel;
 
     public ChatClientMain() {
         try {
             client = new ChatClientImpl();
-            server = (ChatServer) Naming.lookup("rmi://localhost:1900/chatroom");
-            server.registerClient(client);
-            onlineClients = server.getOnlineClients();
+            server = (ChatServer) Naming.lookup("rmi://localhost:1900/chat");
+            onlineClients.addAll(server.getOnlineClients());
         } catch (Exception e) {
-            System.err.println("Failed to connect to server: " + e.getMessage());
+            JOptionPane.showMessageDialog(
+                null,
+                "Failed to connect to server: " + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE
+            );
             System.exit(1);
         }
     }
-    private void handleIncomingMessage(String message, TextBox messagesBox) {
-        gui.getGUIThread().invokeLater(() -> {
-            messagesBox.addLine(message);
-        });
-    }
-    
+
     public void start() {
-        try {
-            Screen screen = new DefaultTerminalFactory().createScreen();
-            screen.startScreen();
+        JFrame frame = new JFrame("Chat Client");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(800, 600);
+        
+        // choose username
+        setUsername(frame);
+        JPanel mainPanel = new JPanel(new BorderLayout());
 
-            gui = new MultiWindowTextGUI(
-                    screen,
-                    new DefaultWindowManager(),
-                    new EmptySpace(TextColor.ANSI.BLUE)
-            );
+        messagesArea = new JTextArea();
+        messagesArea.setEditable(false);
+        JScrollPane messagesScrollPane = new JScrollPane(messagesArea);
+        mainPanel.add(messagesScrollPane, BorderLayout.CENTER);
 
-            BasicWindow mainWindow = new BasicWindow("Chat Client");
-            Panel mainPanel = new Panel(new BorderLayout());
+        JPanel inputPanel = new JPanel(new BorderLayout());
+        JTextField inputField = new JTextField();
+        JButton sendButton = new JButton("Send");
+        sendButton.addActionListener(e -> sendMessage(inputField.getText()));
+        inputPanel.add(inputField, BorderLayout.CENTER);
+        inputPanel.add(sendButton, BorderLayout.EAST);
+        mainPanel.add(inputPanel, BorderLayout.SOUTH);
 
-            // Sidebar with online clients and joined rooms
-            Panel sidebar = new Panel(new LinearLayout(Direction.VERTICAL));
-            updateSidebar(sidebar);
+        JPanel sidebarPanel = new JPanel(new BorderLayout());
 
-            // Messages area
-            TextBox messagesBox = new TextBox()
-                    .setReadOnly(true)
-                    .setPreferredSize(new TerminalSize(50, 20));
-                    client.setOnMessageReceivedListener(message -> {
-                        handleIncomingMessage(message.getContent(), messagesBox);
-                    });
-            mainPanel.addComponent(messagesBox, BorderLayout.Location.CENTER);
+        onlineClientsModel = new DefaultListModel<>();
+        onlineClients.forEach(onlineClientsModel::addElement);
+        JList<String> onlineClientsList = new JList<>(onlineClientsModel);
+        onlineClientsList.setBorder(
+            BorderFactory.createTitledBorder("Online Clients")
+        );
+        onlineClientsList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                String selectedClient = onlineClientsList.getSelectedValue();
+                try {
+                    if (selectedClient != null) switchToPrivateMessaging(
+                        selectedClient
+                    );
+                } catch (Exception ex) {}
+            }
+        });
+        sidebarPanel.add(
+            new JScrollPane(onlineClientsList),
+            BorderLayout.NORTH
+        );
 
-            Panel inputPanel = new Panel(new LinearLayout(Direction.HORIZONTAL));
-            TextBox inputBox = new TextBox(new TerminalSize(40, 1));
-            Button sendButton = new Button("Send", () -> sendMessage(inputBox.getText(), messagesBox));
-            inputPanel.addComponent(inputBox);
-            inputPanel.addComponent(sendButton);
-            mainPanel.addComponent(inputPanel, BorderLayout.Location.BOTTOM);
+        joinedRoomsModel = new DefaultListModel<>();
+        JList<String> joinedRoomsList = new JList<>(joinedRoomsModel);
+        joinedRoomsList.setBorder(
+            BorderFactory.createTitledBorder("Joined Rooms")
+        );
+        joinedRoomsList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                String selectedRoom = joinedRoomsList.getSelectedValue();
+                if (selectedRoom != null) switchToRoomMessaging(selectedRoom);
+            }
+        });
+        sidebarPanel.add(new JScrollPane(joinedRoomsList), BorderLayout.CENTER);
 
-            Panel managementPanel = new Panel(new LinearLayout(Direction.HORIZONTAL));
-            Button createRoomButton = new Button("Create Room", () -> createRoom(messagesBox, sidebar));
-            Button joinRoomButton = new Button("Join Room", () -> joinRoom(messagesBox, sidebar));
-            Button leaveRoomButton = new Button("Leave Room", () -> leaveRoom(messagesBox, sidebar));
-            managementPanel.addComponent(createRoomButton);
-            managementPanel.addComponent(joinRoomButton);
-            managementPanel.addComponent(leaveRoomButton);
-            mainPanel.addComponent(managementPanel, BorderLayout.Location.TOP);
+        JPanel roomManagementPanel = new JPanel(new GridLayout(1, 3));
+        JButton createRoomButton = new JButton("Create Room");
+        createRoomButton.addActionListener(e -> createRoom());
+        JButton joinRoomButton = new JButton("Join Room");
+        joinRoomButton.addActionListener(e -> joinRoom(frame));
+        JButton leaveRoomButton = new JButton("Leave Room");
+        leaveRoomButton.addActionListener(e -> leaveRoom());
+        roomManagementPanel.add(createRoomButton);
+        roomManagementPanel.add(joinRoomButton);
+        roomManagementPanel.add(leaveRoomButton);
+        sidebarPanel.add(roomManagementPanel, BorderLayout.SOUTH);
+        JButton deleteRoomButton = new JButton("Delete Room");
+        deleteRoomButton.addActionListener(e -> deleteRoom());
+        roomManagementPanel.add(deleteRoomButton);
 
-            mainPanel.addComponent(sidebar, BorderLayout.Location.LEFT);
-            mainWindow.setComponent(mainPanel);
+        mainPanel.add(sidebarPanel, BorderLayout.WEST);
 
-            gui.addWindowAndWait(mainWindow);
-        } catch (Exception e) {
-            e.printStackTrace();
+        frame.add(mainPanel);
+        frame.setVisible(true);
+
+        client.setOnMessageReceivedListener(message ->
+            handleIncomingMessage(message.getContent())
+        );
+
+        client.setClientsListener(message ->{
+            System.out.println(message);
+            onlineClientsModel.addElement(message);
         }
+        
+    );
+
     }
 
-    private void sendMessage(String message, TextBox messagesBox) {
+    private void handleIncomingMessage(String message) {
+        SwingUtilities.invokeLater(() -> messagesArea.append(message + "\n"));
+    }
+
+    private void sendMessage(String message) {
         if (message == null || message.isBlank()) return;
 
         try {
-            if (isInRoom && currentRoom != null) {
-                Message msg = new Message(client.getID(), currentRoom, client.getID() + "<" + currentRoom + ">: " + message);
+            if (privateRecipient != null) {
+                Message msg = new Message(
+                    client.getUsername(),
+                    privateRecipient,
+                    client.getUsername() + " (private): " + message
+                );
+                server.sendMessage(msg, privateRecipient);
+                messagesArea.append(
+                    "You (to " + privateRecipient + "): " + message + "\n"
+                );
+            } else if (isInRoom && currentRoom != null) {
+                Message msg = new Message(
+                    client.getUsername(),
+                    currentRoom,
+                    client.getUsername() + "<" + currentRoom + ">: " + message
+                );
                 server.sendMessageToRoom(currentRoom, msg);
-                messagesBox.addLine("Message sent to Room<" + currentRoom + ">: " + message);
             } else {
-                messagesBox.addLine("Join a room before sending messages.");
+                messagesArea.append(
+                    "Join a room or select a user to send messages.\n"
+                );
             }
         } catch (Exception e) {
-            messagesBox.addLine("Error sending message: " + e.getMessage());
+            messagesArea.append(
+                "Error sending message: " + e.getMessage() + "\n"
+            );
         }
     }
 
-    private void createRoom(TextBox messagesBox, Panel sidebar) {
-        String roomName = promptInput("Enter Room Name:");
+    private void switchToPrivateMessaging(String recipient)
+        throws RemoteException {
+        privateRecipient = recipient;
+        currentRoom = null;
+        client.resetRoom();
+        updateSidebarLabels();
+        messagesArea.setText("");
+        messagesArea.append("You are now chatting with: " + recipient + "\n");
+    }
+
+    private void switchToRoomMessaging(String room) {
+        currentRoom = room;
+        privateRecipient = null;
+        updateSidebarLabels();
+        messagesArea.setText("");
+        messagesArea.append("You are now in room: " + room + "\n");
+    }
+
+    private void setUsername(JFrame frame) {
+        String username = JOptionPane.showInputDialog("Type a username:");
+        if (username == null || username.isBlank()) return;
+        try {
+            if (server.isUsernameTaken(username)) {
+                JOptionPane.showMessageDialog(frame, "Username taken.");
+                System.exit(0);
+                return;
+            }
+            // set username
+            client.setUsername(username);
+            // register client in server
+            server.registerClient(client);
+        } catch (Exception e) {
+            messagesArea.append("Error joining room: " + e.getMessage() + "\n");
+        }
+    }
+
+    private void updateSidebarLabels() {
+        for (int i = 0; i < onlineClientsModel.size(); i++) {
+            String client = onlineClientsModel
+                .getElementAt(i)
+                .replace(" (opened)", "");
+            if (client.equals(privateRecipient)) {
+                onlineClientsModel.set(i, client + " (opened)");
+            } else {
+                onlineClientsModel.set(i, client);
+            }
+        }
+        for (int i = 0; i < joinedRoomsModel.size(); i++) {
+            String room = joinedRoomsModel
+                .getElementAt(i)
+                .replace(" (opened)", "");
+            if (room.equals(currentRoom)) {
+                joinedRoomsModel.set(i, room + " (opened)");
+            } else {
+                joinedRoomsModel.set(i, room);
+            }
+        }
+    }
+
+    private void createRoom() {
+        String roomName = JOptionPane.showInputDialog("Enter Room Name:");
         if (roomName == null || roomName.isBlank()) return;
 
         try {
-            Room room = new Room(roomName, client.getID());
+            Room room = new Room(roomName, client.getUsername());
             server.registerRoom(room);
             server.addMemberToRoom(roomName, client);
             isInRoom = true;
             currentRoom = roomName;
             joinedRooms.add(roomName);
-            updateSidebar(sidebar);
-            messagesBox.addLine("Room created and joined: " + roomName);
+            client.setRoom(roomName);
+            joinedRoomsModel.addElement(roomName);
+            switchToRoomMessaging(roomName);
         } catch (Exception e) {
-            messagesBox.addLine("Error creating room: " + e.getMessage());
+            messagesArea.append(
+                "Error creating room: " + e.getMessage() + "\n"
+            );
         }
     }
 
-    private void joinRoom(TextBox messagesBox, Panel sidebar) {
-        String roomName = promptInput("Enter Room Name to Join:");
+    private void joinRoom(JFrame frame) {
+        String roomName = JOptionPane.showInputDialog(
+            "Enter Room Name to Join:"
+        );
         if (roomName == null || roomName.isBlank()) return;
-
         try {
+            if (!server.doesRoomExist(roomName)) {
+                JOptionPane.showMessageDialog(frame, "Room does not exist.");
+                return;
+            }
             server.addMemberToRoom(roomName, client);
             isInRoom = true;
             currentRoom = roomName;
+            client.setRoom(roomName);
+
             joinedRooms.add(roomName);
-            updateSidebar(sidebar);
-            messagesBox.addLine("Joined room: " + roomName);
+            joinedRoomsModel.addElement(roomName);
+            switchToRoomMessaging(roomName);
         } catch (Exception e) {
-            messagesBox.addLine("Error joining room: " + e.getMessage());
+            messagesArea.append("Error joining room: " + e.getMessage() + "\n");
         }
     }
 
-    private void leaveRoom(TextBox messagesBox, Panel sidebar) {
+    private void leaveRoom() {
         if (!isInRoom || currentRoom == null) {
-            messagesBox.addLine("You are not in any room to leave.");
+            messagesArea.append("You are not in any room to leave.\n");
             return;
         }
 
         try {
             String roomToLeave = currentRoom;
-            server.deregisterRoom(roomToLeave);
+            server.removeMemberFromRoom(roomToLeave, client);
             joinedRooms.remove(roomToLeave);
+
+            SwingUtilities.invokeLater(() -> {
+                joinedRoomsModel.removeElement(roomToLeave); // Update the UI safely
+            });
+
             currentRoom = null;
             isInRoom = false;
-            updateSidebar(sidebar);
-            messagesBox.addLine("Left room: " + roomToLeave);
+            client.resetRoom();
+            updateSidebarLabels();
+            messagesArea.append("Left room: " + roomToLeave + "\n");
         } catch (Exception e) {
-            messagesBox.addLine("Error leaving room: " + e.getMessage());
+            messagesArea.append("Error leaving room: " + e.getMessage() + "\n");
         }
     }
 
-    private void updateSidebar(Panel sidebar) {
-        sidebar.removeAllComponents();
-        sidebar.addComponent(new Label("Online Clients").addStyle(SGR.BOLD));
-        for (String client : onlineClients) {
-            sidebar.addComponent(new Label(client));
+    private void deleteRoom() {
+        if (!isInRoom || currentRoom == null) {
+            messagesArea.append("You are not in any room to delete.\n");
+            return;
         }
-        sidebar.addComponent(new Separator(Direction.HORIZONTAL));
-        sidebar.addComponent(new Label("Joined Rooms").addStyle(SGR.BOLD));
-        for (String room : joinedRooms) {
-            sidebar.addComponent(new Label(room));
-        }
-    }
 
-    private String promptInput(String promptMessage) {
-        TextInputDialog dialog = new TextInputDialog("Input Required", promptMessage);
-        return dialog.showDialog(gui);
+        try {
+            String roomToDelete = currentRoom;
+            if (!server.isRoomOwner(roomToDelete, client.getUsername())) {
+                messagesArea.append(
+                    "You are not the owner of this room and cannot delete it.\n"
+                );
+                return;
+            }
+
+            server.deregisterRoom(roomToDelete);
+            joinedRooms.remove(roomToDelete);
+
+            SwingUtilities.invokeLater(() -> {
+                joinedRoomsModel.removeElement(roomToDelete); // Update the UI safely
+            });
+
+            currentRoom = null;
+            isInRoom = false;
+            client.resetRoom();
+            updateSidebarLabels();
+            messagesArea.append("Deleted room: " + roomToDelete + "\n");
+        } catch (Exception e) {
+            messagesArea.append(
+                "Error deleting room: " + e.getMessage() + "\n"
+            );
+        }
     }
 
     public static void main(String[] args) {
-        new ChatClientMain().start();
-    }
-}
-
-class TextInputDialog {
-    private final String title;
-    private final String promptMessage;
-    private String inputText;
-
-    public TextInputDialog(String title, String promptMessage) {
-        this.title = title;
-        this.promptMessage = promptMessage;
-    }
-
-    public String showDialog(MultiWindowTextGUI gui) {
-        final BasicWindow dialogWindow = new BasicWindow(title);
-        Panel panel = new Panel(new LinearLayout(Direction.VERTICAL));
-
-        panel.addComponent(new Label(promptMessage));
-        TextBox inputBox = new TextBox();
-        panel.addComponent(inputBox);
-
-        Button okButton = new Button("OK", () -> {
-            inputText = inputBox.getText();
-            dialogWindow.close();
-        });
-
-        Button cancelButton = new Button("Cancel", dialogWindow::close);
-
-        Panel buttonPanel = new Panel(new LinearLayout(Direction.HORIZONTAL));
-        buttonPanel.addComponent(okButton);
-        buttonPanel.addComponent(cancelButton);
-
-        panel.addComponent(buttonPanel);
-        dialogWindow.setComponent(panel);
-
-        gui.addWindowAndWait(dialogWindow);
-        return inputText;
+        SwingUtilities.invokeLater(() -> new ChatClientMain().start());
     }
 }
