@@ -1,0 +1,20 @@
+@startuml
+
+ref over Serveur : auth
+
+participant Client
+participant "Serveur RMI" as Serveur
+participant "Salle de Chat" as Salle
+
+Client -> Serveur: S'inscrire (nomUtilisateur)
+Serveur -> Client: Confirmation d'inscription
+
+Client -> Serveur: Rejoindre salle (nomSalle)
+Serveur -> Salle: Ajouter utilisateur (nomUtilisateur)
+Salle -> Serveur: Confirmation d'ajout
+
+Client -> Salle: Envoyer message ("Salut tout le monde")
+Salle -> Salle: Diffuser message à tous les utilisateurs
+Salle -> Client: Message reçu ("Salut tout le monde")
+
+@enduml

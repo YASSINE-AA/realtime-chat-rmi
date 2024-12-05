@@ -1,0 +1,40 @@
+@startuml
+
+class Utilisateur {
+  -String nom
+  -String email
+  -String motDePasse
+  +void validerEmail()
+  +void creerCompte()
+}
+
+class Salle {
+  -String nom
+  -List<Utilisateur> utilisateurs
+  +void ajouterUtilisateur(Utilisateur utilisateur)
+  +void supprimerUtilisateur(Utilisateur utilisateur)
+}
+
+class Message {
+  -String contenu
+  -Utilisateur expediteur
+  -Date dateEnvoi
+  +void envoyerMessage()
+}
+
+class ServiceMessagerie {
+  +void envoyerMessagePublic(Message message)
+  +void envoyerMessagePrive(Message message)
+}
+
+class ServiceSalle {
+  +void creerSalle(String nom)
+  +void rejoindreSalle(Salle salle)
+}
+
+Utilisateur --> ServiceSalle : "Crée et rejoint des salles"
+Utilisateur --> ServiceMessagerie : "Envoie des messages"
+ServiceSalle --> Salle : "Gère les salles"
+ServiceMessagerie --> Message : "Envoie des messages"
+
+@enduml

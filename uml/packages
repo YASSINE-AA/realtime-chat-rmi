@@ -1,0 +1,44 @@
+@startuml
+package "Application" {
+  package "Utilisateur" {
+    class Utilisateur {
+      -String nom
+      -String email
+      -String motDePasse
+      +void validerEmail()
+      +void creerCompte()
+    }
+  }
+
+  package "Messagerie" {
+    class Message {
+      -String contenu
+      -Utilisateur expediteur
+      -Date dateEnvoi
+      +void envoyerMessage()
+    }
+    class ServiceMessagerie {
+      +void envoyerMessagePublic(Message message)
+      +void envoyerMessagePrive(Message message)
+    }
+  }
+
+  package "Salle" {
+    class Salle {
+      -String nom
+      -List<Utilisateur> utilisateurs
+      +void ajouterUtilisateur(Utilisateur utilisateur)
+      +void supprimerUtilisateur(Utilisateur utilisateur)
+    }
+    class ServiceSalle {
+      +void creerSalle(String nom)
+      +void rejoindreSalle(Salle salle)
+    }
+  }
+}
+
+Utilisateur --> ServiceSalle : "Utilise"
+Utilisateur --> ServiceMessagerie : "Utilise"
+ServiceSalle --> Salle : "Gère"
+ServiceMessagerie --> Message : "Envoie"
+@enduml

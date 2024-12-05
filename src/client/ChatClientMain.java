@@ -171,6 +171,7 @@ public class ChatClientMain {
         throws RemoteException {
         privateRecipient = recipient;
         currentRoom = null;
+        isInRoom = false;
         client.resetRoom();
         updateSidebarLabels();
         messagesArea.setText("");
@@ -178,8 +179,10 @@ public class ChatClientMain {
     }
 
     private void switchToRoomMessaging(String room) {
-        currentRoom = room;
         privateRecipient = null;
+        isInRoom = true;
+        currentRoom = room;
+        client.setRoom(room);
         updateSidebarLabels();
         messagesArea.setText("");
         messagesArea.append("You are now in room: " + room + "\n");

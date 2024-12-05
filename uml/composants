@@ -1,0 +1,8 @@
+@startuml
+
+component "Client" as Client
+component "Serveur RMI" as Serveur
+
+Client --> Serveur : "Appels RMI"
+
+@enduml

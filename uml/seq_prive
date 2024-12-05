@@ -1,0 +1,14 @@
+@startuml
+
+ref over Serveur : auth
+
+participant "Utilisateur A" as UtilisateurA
+participant "Serveur RMI" as Serveur
+participant "Utilisateur B" as UtilisateurB
+
+UtilisateurA -> Serveur: Demander l'envoi d'un message privé\n(destinataire: UtilisateurB, message: "Salut, ça va ?")
+Serveur -> UtilisateurB: Transmettre le message\n("Salut, ça va ?")
+UtilisateurB -> Serveur: Réponse au message privé\n(message: "Très bien, merci !")
+Serveur -> UtilisateurA: Transmettre la réponse\n("Très bien, merci !")
+
+@enduml
