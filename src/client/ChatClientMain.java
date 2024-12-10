@@ -31,8 +31,8 @@ public class ChatClientMain {
         } catch (Exception e) {
             JOptionPane.showMessageDialog(
                 null,
-                "Failed to connect to server: " + e.getMessage(),
-                "Error",
+                "Échec de la connexion au serveur: " + e.getMessage(),
+                "Erreur",
                 JOptionPane.ERROR_MESSAGE
             );
             System.exit(1);
@@ -40,11 +40,10 @@ public class ChatClientMain {
     }
 
     public void start() {
-        JFrame frame = new JFrame("Chat Client");
+        JFrame frame = new JFrame("Client de Chat");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(800, 600);
         
-        // choose username
         setUsername(frame);
         JPanel mainPanel = new JPanel(new BorderLayout());
 
@@ -55,7 +54,7 @@ public class ChatClientMain {
 
         JPanel inputPanel = new JPanel(new BorderLayout());
         JTextField inputField = new JTextField();
-        JButton sendButton = new JButton("Send");
+        JButton sendButton = new JButton("Envoyer");
         sendButton.addActionListener(e -> sendMessage(inputField.getText()));
         inputPanel.add(inputField, BorderLayout.CENTER);
         inputPanel.add(sendButton, BorderLayout.EAST);
@@ -67,7 +66,7 @@ public class ChatClientMain {
         onlineClients.forEach(onlineClientsModel::addElement);
         JList<String> onlineClientsList = new JList<>(onlineClientsModel);
         onlineClientsList.setBorder(
-            BorderFactory.createTitledBorder("Online Clients")
+            BorderFactory.createTitledBorder("Clients en ligne")
         );
         onlineClientsList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
@@ -87,7 +86,7 @@ public class ChatClientMain {
         joinedRoomsModel = new DefaultListModel<>();
         JList<String> joinedRoomsList = new JList<>(joinedRoomsModel);
         joinedRoomsList.setBorder(
-            BorderFactory.createTitledBorder("Joined Rooms")
+            BorderFactory.createTitledBorder("Salles rejointes")
         );
         joinedRoomsList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
@@ -98,17 +97,17 @@ public class ChatClientMain {
         sidebarPanel.add(new JScrollPane(joinedRoomsList), BorderLayout.CENTER);
 
         JPanel roomManagementPanel = new JPanel(new GridLayout(1, 3));
-        JButton createRoomButton = new JButton("Create Room");
+        JButton createRoomButton = new JButton("Créer une Salle");
         createRoomButton.addActionListener(e -> createRoom());
-        JButton joinRoomButton = new JButton("Join Room");
+        JButton joinRoomButton = new JButton("Rejoindre une Salle");
         joinRoomButton.addActionListener(e -> joinRoom(frame));
-        JButton leaveRoomButton = new JButton("Leave Room");
+        JButton leaveRoomButton = new JButton("Quitter la Salle");
         leaveRoomButton.addActionListener(e -> leaveRoom());
         roomManagementPanel.add(createRoomButton);
         roomManagementPanel.add(joinRoomButton);
         roomManagementPanel.add(leaveRoomButton);
         sidebarPanel.add(roomManagementPanel, BorderLayout.SOUTH);
-        JButton deleteRoomButton = new JButton("Delete Room");
+        JButton deleteRoomButton = new JButton("Supprimer la Salle");
         deleteRoomButton.addActionListener(e -> deleteRoom());
         roomManagementPanel.add(deleteRoomButton);
 
@@ -146,7 +145,7 @@ public class ChatClientMain {
                 );
                 server.sendMessage(msg, privateRecipient);
                 messagesArea.append(
-                    "You (to " + privateRecipient + "): " + message + "\n"
+                    "Vous (à " + privateRecipient + "): " + message + "\n"
                 );
             } else if (isInRoom && currentRoom != null) {
                 Message msg = new Message(
@@ -157,12 +156,12 @@ public class ChatClientMain {
                 server.sendMessageToRoom(currentRoom, msg);
             } else {
                 messagesArea.append(
-                    "Join a room or select a user to send messages.\n"
+                    "Rejoignez une salle ou sélectionnez un utilisateur pour envoyer des messages.\n"
                 );
             }
         } catch (Exception e) {
             messagesArea.append(
-                "Error sending message: " + e.getMessage() + "\n"
+                "Erreur sending message: " + e.getMessage() + "\n"
             );
         }
     }
@@ -175,7 +174,7 @@ public class ChatClientMain {
         client.resetRoom();
         updateSidebarLabels();
         messagesArea.setText("");
-        messagesArea.append("You are now chatting with: " + recipient + "\n");
+        messagesArea.append("Vous discutez maintenant avec : " + recipient + "\n");
     }
 
     private void switchToRoomMessaging(String room) {
@@ -185,15 +184,15 @@ public class ChatClientMain {
         client.setRoom(room);
         updateSidebarLabels();
         messagesArea.setText("");
-        messagesArea.append("You are now in room: " + room + "\n");
+        messagesArea.append("Vous êtes maintenant dans la salle : " + room + "\n");
     }
 
     private void setUsername(JFrame frame) {
-        String username = JOptionPane.showInputDialog("Type a username:");
+        String username = JOptionPane.showInputDialog("Saisissez un nom d'utilisateur :");
         if (username == null || username.isBlank()) return;
         try {
             if (server.isUsernameTaken(username)) {
-                JOptionPane.showMessageDialog(frame, "Username taken.");
+                JOptionPane.showMessageDialog(frame, "Nom d'utilisateur déjà pris.");
                 System.exit(0);
                 return;
             }
@@ -202,7 +201,7 @@ public class ChatClientMain {
             // register client in server
             server.registerClient(client);
         } catch (Exception e) {
-            messagesArea.append("Error joining room: " + e.getMessage() + "\n");
+            messagesArea.append("Erreur joining room: " + e.getMessage() + "\n");
         }
     }
 
@@ -230,7 +229,7 @@ public class ChatClientMain {
     }
 
     private void createRoom() {
-        String roomName = JOptionPane.showInputDialog("Enter Room Name:");
+        String roomName = JOptionPane.showInputDialog("Entrez le nom de la salle :");
         if (roomName == null || roomName.isBlank()) return;
 
         try {
@@ -245,19 +244,19 @@ public class ChatClientMain {
             switchToRoomMessaging(roomName);
         } catch (Exception e) {
             messagesArea.append(
-                "Error creating room: " + e.getMessage() + "\n"
+                "Erreur creating room: " + e.getMessage() + "\n"
             );
         }
     }
 
     private void joinRoom(JFrame frame) {
         String roomName = JOptionPane.showInputDialog(
-            "Enter Room Name to Join:"
+            "Entrez le nom de la salle à rejoindre :"
         );
         if (roomName == null || roomName.isBlank()) return;
         try {
             if (!server.doesRoomExist(roomName)) {
-                JOptionPane.showMessageDialog(frame, "Room does not exist.");
+                JOptionPane.showMessageDialog(frame, "La salle n'existe pas.");
                 return;
             }
             server.addMemberToRoom(roomName, client);
@@ -269,13 +268,13 @@ public class ChatClientMain {
             joinedRoomsModel.addElement(roomName);
             switchToRoomMessaging(roomName);
         } catch (Exception e) {
-            messagesArea.append("Error joining room: " + e.getMessage() + "\n");
+            messagesArea.append("Erreur joining room: " + e.getMessage() + "\n");
         }
     }
 
     private void leaveRoom() {
         if (!isInRoom || currentRoom == null) {
-            messagesArea.append("You are not in any room to leave.\n");
+            messagesArea.append("Vous n'êtes dans aucune salle à quitter.\n");
             return;
         }
 
@@ -285,22 +284,22 @@ public class ChatClientMain {
             joinedRooms.remove(roomToLeave);
 
             SwingUtilities.invokeLater(() -> {
-                joinedRoomsModel.removeElement(roomToLeave); // Update the UI safely
+                joinedRoomsModel.removeElement(roomToLeave);
             });
 
             currentRoom = null;
             isInRoom = false;
             client.resetRoom();
             updateSidebarLabels();
-            messagesArea.append("Left room: " + roomToLeave + "\n");
+            messagesArea.append("Vous avez quitté la salle : " + roomToLeave + "\n");
         } catch (Exception e) {
-            messagesArea.append("Error leaving room: " + e.getMessage() + "\n");
+            messagesArea.append("Erreur leaving room: " + e.getMessage() + "\n");
         }
     }
 
     private void deleteRoom() {
         if (!isInRoom || currentRoom == null) {
-            messagesArea.append("You are not in any room to delete.\n");
+            messagesArea.append("Vous n'êtes dans aucune salle à supprimer.\n");
             return;
         }
 
@@ -308,7 +307,7 @@ public class ChatClientMain {
             String roomToDelete = currentRoom;
             if (!server.isRoomOwner(roomToDelete, client.getUsername())) {
                 messagesArea.append(
-                    "You are not the owner of this room and cannot delete it.\n"
+                    "Vous n'êtes pas le propriétaire de cette salle et ne pouvez pas la supprimer.\n"
                 );
                 return;
             }
@@ -317,17 +316,17 @@ public class ChatClientMain {
             joinedRooms.remove(roomToDelete);
 
             SwingUtilities.invokeLater(() -> {
-                joinedRoomsModel.removeElement(roomToDelete); // Update the UI safely
+                joinedRoomsModel.removeElement(roomToDelete); 
             });
 
             currentRoom = null;
             isInRoom = false;
             client.resetRoom();
             updateSidebarLabels();
-            messagesArea.append("Deleted room: " + roomToDelete + "\n");
+            messagesArea.append("Salle supprimée : " + roomToDelete + "\n");
         } catch (Exception e) {
             messagesArea.append(
-                "Error deleting room: " + e.getMessage() + "\n"
+                "Erreur deleting room: " + e.getMessage() + "\n"
             );
         }
     }
